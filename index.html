@@ -16,11 +16,18 @@
         .user-profile { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; }
         .dropdown { display: none; position: absolute; top: 45px; right: 0; background: white; color: #333; min-width: 200px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; }
         .dropdown button { width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
-        .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .card { background: white; padding: 32px; border-radius: 16px; margin: auto; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative; }
         input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; }
         .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; background: var(--accent); color: white; }
         .contact-item { background: white; padding: 16px; border-radius: 12px; margin: 10px; display: flex; align-items: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .avatar { width: 45px; height: 45px; background: var(--primary); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; }
+        
+        /* Loading Animation Styles */
+        #loader-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); border-radius: 16px; z-index: 10; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { margin-top: 10px; font-size: 14px; color: var(--primary); font-weight: bold; }
+
         #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; flex-direction: column; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { width: 110px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 12px; border: 2px solid #fff; object-fit: cover; }
@@ -34,10 +41,15 @@
             <h2 style="color: var(--primary)">Login</h2>
             <input type="tel" id="login-id" placeholder="Mobile ID" inputmode="numeric">
             <input type="password" id="login-pass" placeholder="Password">
-            <button class="btn" onclick="handleLogin()">Login</button>
+            <button class="btn" id="login-btn" onclick="handleLogin()">Login</button>
             <p onclick="toggleAuth(false)" style="color: var(--primary); cursor: pointer; margin-top: 15px; font-size: 14px;">പുതിയ അക്കൗണ്ട്? Register</p>
         </div>
+
         <div class="card" id="reg-box" style="display: none;">
+            <div id="loader-overlay">
+                <div class="spinner"></div>
+                <div class="loader-text" id="status-msg">അപേക്ഷ അയക്കുന്നു...</div>
+            </div>
             <h2 style="color: var(--primary)">Register</h2>
             <input type="text" id="reg-name" placeholder="Full Name">
             <input type="tel" id="reg-id" placeholder="Mobile ID" inputmode="numeric">
@@ -78,7 +90,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        emailjs.init("9ynLrm-41NbPpvJPG"); // നിന്റെ Public Key ഇവിടെ നൽകുക
+        emailjs.init("9ynLrm-41NbPpvJPG");
 
         let peer, localStream, currentCall, myId;
 
@@ -87,13 +99,21 @@
             document.getElementById('reg-box').style.display = isLogin ? 'none' : 'block';
         }
 
+        function showLoader(msg) {
+            const loader = document.getElementById('loader-overlay');
+            document.getElementById('status-msg').innerText = msg;
+            loader.style.display = 'flex';
+        }
+
         function requestAccess() {
             const name = document.getElementById('reg-name').value;
             const id = document.getElementById('reg-id').value;
             const mail = document.getElementById('reg-mail').value;
             const pass = document.getElementById('reg-pass').value;
 
-            if(!name || !id || !mail || !pass) return alert("All fields required");
+            if(!name || !id || !mail || !pass) return;
+
+            showLoader("അപേക്ഷ അയക്കുന്നു...");
 
             emailjs.send("service_8exfr9s", "template_8yx5s1k", {
                 from_name: name,
@@ -101,8 +121,8 @@
                 user_email: mail
             }).then(() => {
                 db.ref('pending_users/' + id).set({ name, id, mail, pass });
-                alert("Request sent to Admin! Wait for approval.");
-                location.reload();
+                showLoader("അപേക്ഷ അയച്ചു! അഡ്മിൻ അപ്രൂവലിനായി കാത്തിരിക്കുക.");
+                setTimeout(() => location.reload(), 3000);
             });
         }
 
@@ -113,7 +133,10 @@
                 if (snap.exists() && snap.val().pass === pass) {
                     localStorage.setItem('session', JSON.stringify(snap.val()));
                     startApp(snap.val());
-                } else alert("Invalid Login or Not Approved");
+                } else {
+                    document.getElementById('login-btn').innerText = "അനുമതിയില്ല / തെറ്റായ വിവരങ്ങൾ";
+                    setTimeout(() => document.getElementById('login-btn').innerText = "Login", 2000);
+                }
             });
         }
 
@@ -145,26 +168,36 @@
             const params = new URLSearchParams(window.location.search);
             const action = params.get('action');
             const targetId = params.get('id');
+            
             if (action === 'approve' && targetId) {
+                // അഡ്മിൻ ലിങ്ക് ക്ലിക്ക് ചെയ്യുമ്പോൾ കാർഡ് കാണാതിരിക്കാൻ ഓട്ടോമാറ്റിക് ലോഗിൻ ടോഗിൾ ചെയ്യാം
+                toggleAuth(false);
+                showLoader("യൂസറെ ആഡ് ചെയ്യുന്നു...");
+
                 db.ref('pending_users/' + targetId).once('value', snap => {
                     if (snap.exists()) {
                         const data = snap.val();
                         db.ref('users/' + targetId).set(data).then(() => {
                             db.ref('pending_users/' + targetId).remove();
-                            // ഉപയോക്താവിന് അഭിനന്ദന മെയിൽ അയക്കാം
                             emailjs.send("service_8exfr9s", "template_vvf9da9", {
                                 to_name: data.name,
-                                to_email: data.mail
+                                to_email: data.mail,
+                                user_id: data.id
                             });
-                            alert("User Approved Successfully!");
-                            window.location.href = window.location.pathname;
+                            showLoader("യൂസറെ വിജയകരമായി ആഡ് ചെയ്തു!");
+                            setTimeout(() => window.location.href = window.location.pathname, 2500);
                         });
+                    } else {
+                        showLoader("യൂസറെ കണ്ടെത്താനായില്ല.");
+                        setTimeout(() => window.location.href = window.location.pathname, 2000);
                     }
                 });
             } else if (action === 'reject' && targetId) {
+                toggleAuth(false);
+                showLoader("അപേക്ഷ നീക്കം ചെയ്യുന്നു...");
                 db.ref('pending_users/' + targetId).remove().then(() => {
-                    alert("Request Rejected.");
-                    window.location.href = window.location.pathname;
+                    showLoader("അപേക്ഷ നിരസിച്ചു.");
+                    setTimeout(() => window.location.href = window.location.pathname, 2000);
                 });
             }
         }
