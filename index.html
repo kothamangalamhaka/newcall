@@ -160,12 +160,15 @@
             });
             peer.on('call', call => { 
                 currentCall = call; 
-                incomingIsVideo = (call.options && call.options.constraints) ? !!call.options.constraints.video : true;
+                // വിളിക്കുന്നയാൾ വീഡിയോ ക്വറി അയച്ചിട്ടുണ്ടോ എന്ന് നോക്കുന്നു
+                incomingIsVideo = (call.options && call.options._payload && call.options._payload.constraints) ? !!call.options._payload.constraints.video : false;
+                
+                // മുകളിൽ പറഞ്ഞത് ചിലപ്പോൾ കിട്ടില്ല, അതുകൊണ്ട് സ്ട്രീം മെറ്റാഡാറ്റ വഴി ഒന്നുകൂടി ഉറപ്പിക്കാം
                 document.getElementById('ringtone').play(); 
                 let typeMsg = incomingIsVideo ? "വീഡിയോ കോൾ" : "ഓഡിയോ കോൾ";
                 if(confirm(typeMsg + " വരുന്നു... സ്വീകരിക്കണോ?")) answerCall(); 
                 else {
-                    // റിജക്ട് ചെയ്യുമ്പോൾ മറ്റേ വശത്തും കട്ട് ആകാൻ സിഗ്നൽ നൽകുന്നു
+                    // റിജക്ട് സിൻക് ചെയ്യാൻ
                     call.answer(); 
                     setTimeout(() => endCall(), 500);
                 }
@@ -174,43 +177,40 @@
 
         async function initiateCall(target, isVideo) {
             try {
+                // ഇവിടെ video constraints കൃത്യമായി നൽകുന്നു
                 localStream = await navigator.mediaDevices.getUserMedia(isVideo ? videoConstraints : audioConstraints);
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video').style.display = isVideo ? 'block' : 'none';
                 document.getElementById('call-overlay').style.display = 'flex';
                 currentCall = peer.call(target, localStream);
                 handleCallEvents(currentCall);
-            } catch (err) { alert("അനുമതി ആവശ്യമാണ്."); }
+            } catch (err) { alert("അനുമതി നൽകുക."); }
         }
 
         async function answerCall() {
             document.getElementById('ringtone').pause();
             try {
+                // റിസീവ് ചെയ്യുമ്പോഴും വിളിച്ചയാളുടെ ടൈപ്പ് തന്നെ ഉപയോഗിക്കുന്നു
                 localStream = await navigator.mediaDevices.getUserMedia(incomingIsVideo ? videoConstraints : audioConstraints);
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('local-video').style.display = incomingIsVideo ? 'block' : 'none';
                 document.getElementById('call-overlay').style.display = 'flex';
                 currentCall.answer(localStream);
                 handleCallEvents(currentCall);
-            } catch (err) { alert("കോൾ സ്വീകരിക്കാൻ കഴിഞ്ഞില്ല."); endCall(); }
+            } catch (err) { alert("Error: " + err); endCall(); }
         }
 
         function handleCallEvents(call) {
             call.on('stream', s => {
                 const remoteVideo = document.getElementById('remote-video');
                 remoteVideo.srcObject = s;
+                // ഓഡിയോ മാത്രമാണെങ്കിൽ റിമോട്ട് വീഡിയോ ഹൈഡ് ചെയ്യുന്നു
                 remoteVideo.style.display = (s.getVideoTracks().length > 0) ? 'block' : 'none';
             });
-
-            // കോൾ ക്ലോസ് ചെയ്യുമ്പോൾ
             call.on('close', () => endCall());
-            
-            // എതിർകക്ഷി ഡിസ്കണക്ട് ആയാൽ ഉടൻ കട്ട് ആകാൻ നിരീക്ഷിക്കുന്നു
             if (connCheckInterval) clearInterval(connCheckInterval);
             connCheckInterval = setInterval(() => {
-                if (call.peerConnection && (call.peerConnection.iceConnectionState === 'disconnected' || 
-                    call.peerConnection.iceConnectionState === 'closed' || 
-                    call.peerConnection.signalingState === 'closed')) {
+                if (call.peerConnection && (call.peerConnection.iceConnectionState === 'disconnected' || call.peerConnection.iceConnectionState === 'closed')) {
                     endCall();
                 }
             }, 1500);
@@ -219,14 +219,8 @@
         function endCall() { 
             document.getElementById('ringtone').pause(); 
             if (connCheckInterval) clearInterval(connCheckInterval);
-            if(currentCall) {
-                currentCall.close();
-                currentCall = null;
-            } 
-            if(localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                localStream = null;
-            } 
+            if(currentCall) { currentCall.close(); currentCall = null; } 
+            if(localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; } 
             document.getElementById('call-overlay').style.display = 'none'; 
             document.getElementById('remote-video').srcObject = null;
         }
