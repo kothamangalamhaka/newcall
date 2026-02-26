@@ -10,22 +10,24 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        :root { --whatsapp-green: #075e54; --light-green: #25d366; --bg-gray: #ece5dd; }
+        :root { --whatsapp-green: #075e54; --light-green: #25d366; --bg-gray: #ece5dd; --danger: #ff3b30; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-gray); margin: 0; overflow-x: hidden; }
         
         /* Layouts */
         #auth-screen, #main-screen { display: none; height: 100vh; flex-direction: column; }
         .header { background: var(--whatsapp-green); color: white; padding: 15px; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* Dialer Section */
-        .dialer-container { background: white; padding: 15px; display: flex; gap: 10px; border-bottom: 1px solid #ddd; }
+        .header-btns { display: flex; gap: 10px; }
+        .icon-btn { background: none; border: none; color: white; font-size: 14px; cursor: pointer; text-decoration: underline; }
+
+        /* Dialer & Profile */
+        .top-section { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; }
+        .dialer-container { display: flex; gap: 10px; }
         .dialer-input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
         .dialer-btn { background: var(--light-green); border: none; padding: 10px 15px; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
 
         /* Contact List */
         .contact-item { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; align-items: center; cursor: pointer; }
-        .contact-item:hover { background: #f5f5f5; }
-        .avatar { width: 50px; height: 50px; background: #ccc; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+        .avatar { width: 50px; height: 50px; background: #ccc; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 20px; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: auto; }
         .online { background: var(--light-green); }
         .offline { background: #bbb; }
@@ -34,16 +36,19 @@
         #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 100; flex-direction: column; }
         .video-container { flex: 1; position: relative; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { width: 120px; height: 160px; position: absolute; top: 20px; right: 20px; border-radius: 10px; border: 2px solid white; object-fit: cover; }
+        #local-video { width: 100px; height: 140px; position: absolute; top: 20px; right: 20px; border-radius: 10px; border: 2px solid white; object-fit: cover; }
         .call-controls { height: 100px; display: flex; justify-content: center; align-items: center; gap: 30px; background: rgba(0,0,0,0.5); }
-        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
-        .btn-end { background: #ff3b30; }
-        .btn-accept { background: #4cd964; }
+        .btn-round { width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; }
+        .btn-end { background: var(--danger); }
+        .btn-accept { background: var(--light-green); }
 
         /* Auth Card */
-        .auth-card { background: white; padding: 30px; border-radius: 15px; margin: auto; width: 85%; max-width: 350px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-primary { background: var(--light-green); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .auth-card { background: white; padding: 30px; border-radius: 15px; margin: auto; width: 85%; max-width: 380px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .row { display: flex; gap: 5px; margin: 10px 0; }
+        select, input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+        .country-select { width: 100px; }
+        .full-input { width: 100%; box-sizing: border-box; }
+        .btn-primary { background: var(--light-green); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -53,8 +58,20 @@
     <div id="auth-screen">
         <div class="auth-card">
             <h2 style="color: var(--whatsapp-green)">Connect</h2>
-            <input type="text" id="username" placeholder="നിങ്ങളുടെ പേര്">
-            <input type="tel" id="phone" placeholder="മൊബൈൽ നമ്പർ (With Country Code)">
+            <input type="text" id="username" class="full-input" placeholder="നിങ്ങളുടെ പേര്">
+            <div class="row">
+                <select id="country-code" class="country-select">
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+91">🇮🇳 +91</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+968">🇴🇲 +968</option>
+                    <option value="+974">🇶🇦 +974</option>
+                    <option value="+973">🇧🇭 +973</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+1">🇺🇸 +1</option>
+                </select>
+                <input type="tel" id="phone" style="flex:1" placeholder="മൊബൈൽ നമ്പർ">
+            </div>
             <button class="btn-primary" onclick="handleLogin()">തുടങ്ങാം</button>
         </div>
     </div>
@@ -62,17 +79,23 @@
     <div id="main-screen">
         <div class="header">
             <span>Connect</span>
-            <span style="font-size: 14px; opacity: 0.8;" id="my-num"></span>
+            <div class="header-btns">
+                <button class="icon-btn" onclick="editProfile()">Edit Name</button>
+                <button class="icon-btn" style="color: #ffcccc;" onclick="logout()">Logout</button>
+            </div>
         </div>
 
-        <div class="dialer-container">
-            <input type="tel" id="dial-number" class="dialer-input" placeholder="നമ്പർ ടൈപ്പ് ചെയ്യുക...">
-            <button class="dialer-btn" onclick="dialCall()">Call</button>
+        <div class="top-section">
+            <div id="welcome-text" style="font-weight: bold; color: var(--whatsapp-green);">ഹലോ...</div>
+            <div class="dialer-container">
+                <input type="tel" id="dial-number" class="dialer-input" placeholder="നമ്പർ ടൈപ്പ് ചെയ്യുക...">
+                <button class="dialer-btn" onclick="dialCall()">Call</button>
+            </div>
         </div>
 
-        <div style="padding: 10px; font-size: 14px; color: #666;">നിങ്ങളുടെ കോൺടാക്റ്റുകൾ</div>
+        <div style="padding: 10px; font-size: 14px; color: #666;">കോൺടാക്റ്റുകൾ</div>
         <div id="contact-list">
-            <p style="text-align: center; margin-top: 20px;">കോൺടാക്റ്റുകൾ തിരയുന്നു...</p>
+            <p style="text-align: center; margin-top: 20px;">തിരയുന്നു...</p>
         </div>
     </div>
 
@@ -107,28 +130,36 @@
             if (saved) {
                 const data = JSON.parse(saved);
                 document.getElementById('username').value = data.name;
-                document.getElementById('phone').value = data.phone;
-                handleLogin();
+                myPhone = data.phone;
+                initApp(data.name, data.phone);
             } else {
                 document.getElementById('auth-screen').style.display = 'flex';
             }
         };
 
-        async function handleLogin() {
+        function handleLogin() {
             const name = document.getElementById('username').value;
-            myPhone = document.getElementById('phone').value;
-            if (!name || !myPhone) return alert("വിവരങ്ങൾ നൽകുക");
-
+            const code = document.getElementById('country-code').value;
+            const rawPhone = document.getElementById('phone').value.trim();
+            
+            if (!name || !rawPhone) return alert("പേരും നമ്പറും നൽകുക");
+            
+            myPhone = code + rawPhone;
             localStorage.setItem('user_data', JSON.stringify({name, phone: myPhone}));
+            initApp(name, myPhone);
+        }
+
+        function initApp(name, phone) {
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('main-screen').style.display = 'flex';
-            document.getElementById('my-num').innerText = myPhone;
+            document.getElementById('welcome-text').innerText = "ഹലോ " + name + " (" + phone + ")";
 
-            peer = new Peer(myPhone);
+            if (peer) peer.destroy();
+            peer = new Peer(phone);
 
             peer.on('open', (id) => {
-                db.ref('users/' + myPhone).set({ name, status: 'online', lastSeen: Date.now() });
-                syncContacts();
+                db.ref('users/' + phone).update({ name, status: 'online', lastSeen: Date.now() });
+                loadUsers();
             });
 
             peer.on('call', (call) => {
@@ -143,7 +174,7 @@
                 document.getElementById('local-video').srcObject = localStream;
                 return true;
             } catch (err) {
-                alert("ക്യാമറ/മൈക്ക് ആക്സസ് ചെയ്യാൻ കഴിഞ്ഞില്ല");
+                alert("ക്യാമറ അനുമതി നൽകുക");
                 return false;
             }
         }
@@ -155,51 +186,58 @@
             }
         }
 
-        async function syncContacts() {
-            loadAllRegisteredUsers();
-        }
-
-        function loadAllRegisteredUsers() {
+        function loadUsers() {
             db.ref('users').on('value', (snapshot) => {
                 const list = document.getElementById('contact-list');
                 list.innerHTML = '';
                 snapshot.forEach((child) => {
                     if (child.key !== myPhone) {
                         const user = child.val();
-                        addContactToUI(user.name, child.key, user.status);
+                        const div = document.createElement('div');
+                        div.className = 'contact-item';
+                        div.onclick = () => startCall(child.key);
+                        div.innerHTML = `
+                            <div class="avatar">${user.name.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <div style="font-weight:bold">${user.name}</div>
+                                <div style="font-size:12px; color:#777">${child.key}</div>
+                            </div>
+                            <div class="status-dot ${user.status === 'online' ? 'online' : 'offline'}"></div>
+                        `;
+                        list.appendChild(div);
                     }
                 });
             });
         }
 
-        function addContactToUI(name, phone, status) {
-            const div = document.createElement('div');
-            div.className = 'contact-item';
-            div.onclick = () => startCall(phone);
-            div.innerHTML = `
-                <div class="avatar">${name.charAt(0)}</div>
-                <div>
-                    <div style="font-weight:bold">${name}</div>
-                    <div style="font-size:12px; color:#777">${phone}</div>
-                </div>
-                <div class="status-dot ${status === 'online' ? 'online' : 'offline'}"></div>
-            `;
-            document.getElementById('contact-list').appendChild(div);
-        }
-
-        function dialCall() {
-            const num = document.getElementById('dial-number').value;
-            if (num) {
-                startCall(num);
-            } else {
-                alert("വിളിക്കേണ്ട നമ്പർ നൽകുക");
+        function editProfile() {
+            const newName = prompt("പുതിയ പേര് നൽകുക:");
+            if (newName) {
+                const data = JSON.parse(localStorage.getItem('user_data'));
+                data.name = newName;
+                localStorage.setItem('user_data', JSON.stringify(data));
+                db.ref('users/' + myPhone).update({ name: newName });
+                document.getElementById('welcome-text').innerText = "ഹലോ " + newName + " (" + myPhone + ")";
             }
         }
 
-        async function startCall(targetPhone) {
-            const streamReady = await startCamera();
-            if (!streamReady) return;
+        function logout() {
+            if (confirm("Logout ചെയ്യണോ?")) {
+                db.ref('users/' + myPhone).update({ status: 'offline' });
+                localStorage.removeItem('user_data');
+                location.reload();
+            }
+        }
 
+        function dialCall() {
+            const num = document.getElementById('dial-number').value.trim();
+            if (num) startCall(num);
+            else alert("നമ്പർ നൽകുക");
+        }
+
+        async function startCall(targetPhone) {
+            const ok = await startCamera();
+            if (!ok) return;
             showCallUI('outgoing', targetPhone);
             const call = peer.call(targetPhone, localStream);
             setupCallEvents(call);
@@ -221,9 +259,8 @@
 
         async function answerCall() {
             ringtone.pause();
-            const streamReady = await startCamera();
-            if (!streamReady) return rejectCall();
-
+            const ok = await startCamera();
+            if (!ok) return rejectCall();
             currentCall.answer(localStream);
             setupCallEvents(currentCall);
         }
