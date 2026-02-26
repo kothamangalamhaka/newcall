@@ -13,26 +13,22 @@
         :root { --whatsapp-green: #075e54; --light-green: #25d366; --bg-gray: #ece5dd; --danger: #ff3b30; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg-gray); margin: 0; overflow-x: hidden; }
         
-        /* Layouts */
         #auth-screen, #main-screen { display: none; height: 100vh; flex-direction: column; }
         .header { background: var(--whatsapp-green); color: white; padding: 15px; font-size: 20px; font-weight: bold; position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
         .header-btns { display: flex; gap: 10px; }
         .icon-btn { background: none; border: none; color: white; font-size: 14px; cursor: pointer; text-decoration: underline; }
 
-        /* Dialer & Profile */
         .top-section { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; flex-direction: column; gap: 10px; }
         .dialer-container { display: flex; gap: 10px; }
         .dialer-input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
         .dialer-btn { background: var(--light-green); border: none; padding: 10px 15px; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
 
-        /* Contact List */
         .contact-item { background: white; padding: 15px; border-bottom: 1px solid #ddd; display: flex; align-items: center; cursor: pointer; }
         .avatar { width: 50px; height: 50px; background: #ccc; border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 20px; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: auto; }
         .online { background: var(--light-green); }
         .offline { background: #bbb; }
 
-        /* Video Call Overlay */
         #call-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 100; flex-direction: column; }
         .video-container { flex: 1; position: relative; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
@@ -42,7 +38,6 @@
         .btn-end { background: var(--danger); }
         .btn-accept { background: var(--light-green); }
 
-        /* Auth Card */
         .auth-card { background: white; padding: 30px; border-radius: 15px; margin: auto; width: 85%; max-width: 380px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
         .row { display: flex; gap: 5px; margin: 10px 0; }
         select, input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
@@ -70,7 +65,7 @@
                     <option value="+44">🇬🇧 +44</option>
                     <option value="+1">🇺🇸 +1</option>
                 </select>
-                <input type="tel" id="phone" style="flex:1" placeholder="മൊബൈൽ നമ്പർ">
+                <input type="tel" id="phone" style="flex:1" placeholder="മൊബൈൽ നമ്പർ" inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
             </div>
             <button class="btn-primary" onclick="handleLogin()">തുടങ്ങാം</button>
         </div>
@@ -88,7 +83,7 @@
         <div class="top-section">
             <div id="welcome-text" style="font-weight: bold; color: var(--whatsapp-green);">ഹലോ...</div>
             <div class="dialer-container">
-                <input type="tel" id="dial-number" class="dialer-input" placeholder="നമ്പർ ടൈപ്പ് ചെയ്യുക...">
+                <input type="tel" id="dial-number" class="dialer-input" placeholder="നമ്പർ ടൈപ്പ് ചെയ്യുക..." inputmode="numeric" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 <button class="dialer-btn" onclick="dialCall()">Call</button>
             </div>
         </div>
@@ -109,14 +104,14 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
-            authDomain: "fefei-8f083.firebaseapp.com",
-            databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
-            projectId: "fefei-8f083",
-            storageBucket: "fefei-8f083.firebasestorage.app",
-            messagingSenderId: "465007199884",
-            appId: "1:465007199884:web:3855e934ea6ec0fddf9da9",
-            measurementId: "G-1FH5G93YR7"
+          apiKey: "AIzaSyAIowb628afMgDxbAqyoHVpXRfSC_mTL2g",
+          authDomain: "fefei-8f083.firebaseapp.com",
+          databaseURL: "https://fefei-8f083-default-rtdb.firebaseio.com",
+          projectId: "fefei-8f083",
+          storageBucket: "fefei-8f083.firebasestorage.app",
+          messagingSenderId: "465007199884",
+          appId: "1:465007199884:web:3855e934ea6ec0fddf9da9",
+          measurementId: "G-1FH5G93YR7"
         };
         
         firebase.initializeApp(firebaseConfig);
@@ -231,7 +226,11 @@
 
         function dialCall() {
             const num = document.getElementById('dial-number').value.trim();
-            if (num) startCall(num);
+            if (num) {
+                // ഡയൽ ചെയ്യുമ്പോൾ നേരിട്ട് കൺട്രി കോഡ് ഇല്ലാത്തതുകൊണ്ട് ശ്രദ്ധിക്കണം
+                // യൂസർ ലിസ്റ്റിൽ കൺട്രി കോഡ് ഉള്ളതുകൊണ്ട് സെർച്ച് ചെയ്യാൻ എളുപ്പമാണ്
+                startCall(num); 
+            }
             else alert("നമ്പർ നൽകുക");
         }
 
